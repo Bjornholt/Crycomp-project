@@ -23,34 +23,34 @@ def GroupGen():
 class Authority:
     def __init__(self, length):
         self.length = length
-        self.curve, self.g, self.q = GroupGen()
-        self.msk = [randbelow(int(self.q)) for _ in range(length)]
+        self.curve, self.g, self.p = GroupGen()
+        self.msk = [randbelow(int(self.p)) for _ in range(length)]
         self.mpk = [s * self.g for s in self.msk]
 
     def getAlice(self):
-        return self.length, self.g, self.mpk, self.q
+        return self.length, self.g, self.mpk, self.p
 
     def getSk(self, y):
         if len(y) != self.length:
             raise ValueError("y must have the configured vector length")
-        return sum(s * yi for s, yi in zip(self.msk, y)) % self.q
+        return sum(s * yi for s, yi in zip(self.msk, y)) % self.p
 
 
 class Alice:
-    def __init__(self, length, g, mpk, q, x):
-        self.length, self.g, self.mpk, self.q, self.x = length, g, mpk, q, x
+    def __init__(self, length, g, mpk, p, x):
+        self.length, self.g, self.mpk, self.p, self.x = length, g, mpk, p, x
 
     def Encrypt(self):
         if len(self.x) != self.length:
             raise ValueError("x must have the configured vector length")
-        r = randbelow(int(self.q))
-        return [r * self.g] + [r * self.mpk[i] + (xi % self.q) * self.g
+        r = randbelow(int(self.p))
+        return [r * self.g] + [r * self.mpk[i] + (xi % self.p) * self.g
                                 for i, xi in enumerate(self.x)]
 
 
 class Bob:
-    def __init__(self, y, g, q, sk_y, max_inner_product=1000):
-        self.y, self.g, self.q, self.sk_y = y, g, q, sk_y
+    def __init__(self, y, g, p, sk_y, max_inner_product=1000):
+        self.y, self.g, self.p, self.sk_y = y, g, p, sk_y
         self.max_inner_product = max_inner_product
 
     def Decrypt(self, ciphertext):
@@ -98,7 +98,7 @@ def main():
         y = capabilities[recipient]
         ciphertext = Alice(*authority.getAlice(), x).Encrypt()
         sk_y = authority.getSk(y)
-        result = Bob(y, authority.g, authority.q, sk_y).Decrypt(ciphertext)
+        result = Bob(y, authority.g, authority.p, sk_y).Decrypt(ciphertext)
         expected = y[donor]
         print(f"donor {donor} -> recipient {recipient}: got {result}, expected {expected}")
         assert result == expected

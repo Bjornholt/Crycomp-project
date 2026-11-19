@@ -8,7 +8,6 @@ from sage.stats.distributions.discrete_gaussian_integer import (
 from itertools import product
 import argparse
 
-
 def sample_s(length, bits, N):
     R = RealField(2 * bits)
     sigma = R(bits).sqrt() * R(length * N).sqrt() ** (length + 1)
@@ -17,12 +16,11 @@ def sample_s(length, bits, N):
     s = [int(ZZ(D())) for _ in range(length)]
     return s
 
-
 SMALL_PRIMES = [3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47]
 
 class Authority:
     def __init__(self):
-        self.saved = []
+       pass 
 
     def GroupGen(self, bits):
             while True:
@@ -54,25 +52,21 @@ class Authority:
         self.msk = s
         return N, mpk 
 
-    def keygen(self, x, N):
-        x = tuple(value % N for value in x)
-        if x not in self.saved:
-            self.saved.append(x)  # Mock state: records exact repeats only.
-        x_bar = x
-        z = sum(si * xi for si, xi in zip(self.msk, x_bar))
-        return x_bar, z
+    def keygen(self, y):
+        sk_y =  sum(self.msk[i] * y[i] for i in range(len(y)))
+        return sk_y
 
 
 class Alice():
     def __init__(self, mpk):
         self.N, self.g, self.h = mpk
 
-    def encrypt(self, y):
+    def encrypt(self, x):
         r = randbelow((self.N//4)+1)
         ciphertext = [pow(self.g,r,self.N**2)]
         ciphertext.extend(
-            ((1 + yi * self.N) * pow(self.h[i], r, self.N**2)) % self.N**2
-            for i, yi in enumerate(y)
+            ((1 + xi * self.N) * pow(self.h[i], r, self.N**2)) % self.N**2
+            for i, xi in enumerate(x)
         )
         return ciphertext
 
@@ -82,13 +76,13 @@ class Bob():
         self.N = N
         self.authority = authority
         
-    def decrypt(self, x, ciphertext):
-        x_bar, z_x = self.authority.keygen(x, self.N)
-        C_x = 1
-        for ct_i, x_i in zip(ciphertext[1:], x_bar):
-            C_x = C_x * pow(ct_i, x_i, self.N**2) % self.N**2
-        C_x = C_x * pow(ciphertext[0], -z_x, self.N**2) % self.N**2
-        return (((C_x - 1) % self.N**2) // self.N) % self.N
+    def decrypt(self, y, ciphertext):
+        sk_y = self.authority.keygen(y)
+        C_y = 1
+        for ct_i, y_i in zip(ciphertext[1:], y):
+            C_y *= pow(ct_i, y_i, self.N**2) % self.N**2
+        C_y *= pow(ciphertext[0], -sk_y, self.N**2) % self.N**2
+        return ((C_y - 1) % self.N**2) // self.N
 
 
 def main():
